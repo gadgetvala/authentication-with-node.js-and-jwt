@@ -20,7 +20,9 @@
     "node.js",
     "security",
     "login",
-    "signup"
+    "signup",
+    "mvc",
+    "restAPI"
   ],
   "author": "Suraj Verma",
   "license": "ISC",

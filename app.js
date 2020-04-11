@@ -1,9 +1,11 @@
 const express = require('express');
+const userRoute = require('./routes/userRoute');
 
 const app = express();
 
 //Middleware
 app.use(express.json());
+app.use('/api/v1/users', userRouter);
 
 //Handling unexpected routes
 app.all('*', (req, res, next) => {
