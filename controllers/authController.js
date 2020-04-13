@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken');
+const { promisify } = require('util');
 const User = require('./../models/userModel');
 
 const signToken = (id) => {
@@ -9,7 +10,7 @@ const signToken = (id) => {
 
 exports.signup = async (req, res) => {
 	try {
-		const newUser = User.create({
+		const newUser = await User.create({
 			name: req.body.name,
 			email: req.body.email,
 			password: req.body.password,
@@ -28,7 +29,7 @@ exports.signup = async (req, res) => {
 	} catch (err) {
 		res.status(400).json({
 			status: 'fail',
-			message: err
+			message: err.message
 		});
 	}
 };
@@ -39,14 +40,14 @@ exports.login = async (req, res) => {
 
 		// 1) Check if email and password exits
 		if (!email || !password) {
-			return new Error('Please provide email and password!');
+			throw new Error('Please provide email and password!');
 		}
 
 		// 2) Check if user exits && password is correct
 		const user = await User.findOne({ email }).select('+password');
 
 		if (!user || !(await user.correctPassword(password, user.password))) {
-			return new Error('Incorect email or password');
+			throw new Error('Incorect email or password');
 		}
 
 		// 3) If everything is ok, send token to client
@@ -59,7 +60,45 @@ exports.login = async (req, res) => {
 	} catch (err) {
 		res.status(400).json({
 			status: 'fail',
-			message: err
+			message: err.message
+		});
+	}
+};
+
+exports.protect = async (req, res, next) => {
+	try {
+		// 1) Getting token and check if it's there
+		let token;
+		if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+			token = req.headers.authorization.split(' ')[1];
+		}
+
+		if (!token) {
+			throw new Error('You are not logged in');
+		}
+
+		// 2) Verification token
+		const decoded = await promisify(jwt.verify)(token, process.env.JWT_SECRET);
+
+		// 3) Check if User still exists
+		const freshUser = await User.findById(decoded.id);
+
+		if (!freshUser) {
+			throw new Error('The user belonging the token does no longer exists');
+		}
+
+		// 4) Check if user has changed the password  after the token was issued
+		if (freshUser.changedPasswordAfter(decoded.iat)) {
+			throw new Error('User has change the password recently');
+		}
+
+		//GRANT ACCESS TO PROTECTED ROUTE
+		req.user = freshUser;
+		next();
+	} catch (err) {
+		res.status(400).json({
+			status: 'fail',
+			message: err.message
 		});
 	}
 };
