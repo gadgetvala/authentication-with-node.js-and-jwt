@@ -10,4 +10,9 @@ router.post('/login', authController.login);
 
 router.route('/').get(userController.getAllUsers);
 
+/**
+Only Admin can delete user:
+**/
+//router.route('/').delete(authController.protect, authController.restrictTo('admin'), user controller)
+
 module.exports = router;

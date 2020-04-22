@@ -102,3 +102,19 @@ exports.protect = async (req, res, next) => {
 		});
 	}
 };
+
+exports.restrictTo = (...roles) => {
+	return (req, res, next) => {
+		try {
+			if (!roles.includes(req.user.role)) {
+				return throw new Error('You do not have premission to perform this action');
+			}
+			next();
+		} catch (err) {
+			res.status(403).json({
+				status: 'fail',
+				message: err.message
+			});
+		}
+	};
+};
